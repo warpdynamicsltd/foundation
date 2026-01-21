@@ -1,0 +1,7 @@
+{
+    "editor.fontSize": 12,
+    "ocaml.server.codelens": false,
+    "ocaml.server.duneDiagnostics": false,
+    "editor.inlayHints.enabled": "offUnlessPressed",
+    "git.untrackedChanges": "hidden"
+}

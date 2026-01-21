@@ -1,0 +1,15 @@
+let formula_of_string s =
+    let lexbuf =  Lexing.from_string s in
+    Parser.wff Lexer.token lexbuf
+
+let term_of_string s =
+    let lexbuf =  Lexing.from_string s in
+    Parser.wft Lexer.token lexbuf
+
+let statement_of_string s =
+    let lexbuf =  Lexing.from_string s in
+    Parser.statement Lexer.token lexbuf
+
+let statements_of_string s =
+    let lexbuf =  Lexing.from_string s in
+    Parser.input Lexer.token lexbuf
