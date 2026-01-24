@@ -1,46 +1,6 @@
 open Types
 open Errors
 
-let rec var_occurs_in_term var = function
-  | Var v -> v = var
-  | Const _ -> false
-  | Func (_, terms) -> List.exists (var_occurs_in_term var) terms
-
-let rec var_occurs_free_in_formula var = function
-  | True -> false
-  | False -> false
-  | Pred(_, args) -> List.exists (var_occurs_in_term var) args
-  | Not f -> var_occurs_free_in_formula var f
-  | And(a, b) -> (var_occurs_free_in_formula var a) || (var_occurs_free_in_formula var b)
-  | Or(a, b) -> (var_occurs_free_in_formula var a) || (var_occurs_free_in_formula var b)
-  | Implies(a, b) -> (var_occurs_free_in_formula var a) || (var_occurs_free_in_formula var b)
-  | Iff(a, b) -> (var_occurs_free_in_formula var a) || (var_occurs_free_in_formula var b)
-  | Exists(v, f) -> not (v = var) && var_occurs_free_in_formula var f
-  | Forall(v, f) -> not (v = var) && var_occurs_free_in_formula var f
-
-
-let rec substitute_in_term var replacement t =
-  match t with
-    | Var v -> if v = var then replacement else Var v
-    | Const _ -> t
-    | Func (f, args) -> Func (f, List.map (substitute_in_term var replacement) args)
-
-let rec substitute_in_formula var replacement = function
-    | True -> True
-    | False -> False
-    | Pred (p, args) -> Pred (p, List.map (substitute_in_term var replacement) args)
-    | Not f -> Not (substitute_in_formula var replacement f)
-    | And(a, b) -> And (substitute_in_formula var replacement a, substitute_in_formula var replacement b)
-    | Or(a, b) -> Or (substitute_in_formula var replacement a, substitute_in_formula var replacement b)
-    | Implies(a, b) -> Implies (substitute_in_formula var replacement a, substitute_in_formula var replacement b)
-    | Iff(a, b) -> Iff (substitute_in_formula var replacement a, substitute_in_formula var replacement b)
-    | Exists(v, f) when v = var -> Exists(v, f)
-    | Exists(v, f) when not (var_occurs_in_term v replacement) && v != var -> Exists(v, substitute_in_formula var replacement f)
-    | Exists(_, _) -> raise (KernelError (NotAdmissible, None))
-    | Forall(v, f) when v = var -> Forall(v, f)
-    | Forall(v, f) when not (var_occurs_in_term v replacement) && v != var -> Forall(v, substitute_in_formula var replacement f)
-    | Forall(_, _) -> raise (KernelError (NotAdmissible, None))
-
 module StringSet = Set.Make(String)
 module StringMap = Map.Make(String)
 
@@ -154,83 +114,6 @@ let rec all_prefixes ref =
 let all_assumptions_of_ref cache proof ref =
   List.map (fun r -> assumption_of_proof cache proof r) (all_prefixes ref)
 
-
-let rule_error () = raise (KernelError (MalformedRule, None))
-
-(* Unified rule function
-   Signature: string -> first_order_formula list -> param list -> first_order_formula list -> first_order_formula
-   - assumptions: formulas from all prefixes
-   - params: list of params (terms and formulas)
-   - premises: formulas from referenced statements
-*)
-let rule = function
-  (* Axioms *)
-  | "TRU" -> (fun _ params premises -> match params, premises with
-      | [], [] -> True
-      | _ -> rule_error())
-  | "LEM" -> (fun _ params premises -> match params, premises with
-      | [Formula a], [] -> Or(a, Not a)
-      | _ -> rule_error())
-  | "IMP" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(a, Implies(b, a))
-      | _ -> rule_error())
-  | "ANL" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(And(a, b), a)
-      | _ -> rule_error())
-  | "ANR" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(And(a, b), b)
-      | _ -> rule_error())
-  | "AND" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(a, Implies(b, And(a, b)))
-      | _ -> rule_error())
-  | "ORL" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(a, Or(a, b))
-      | _ -> rule_error())
-  | "ORR" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(b, Or(a, b))
-      | _ -> rule_error())
-  | "DIS" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b; Formula c], [] -> Implies(Implies(a, c), Implies(Implies(b, c), Implies(Or(a, b), c)))
-      | _ -> rule_error())
-  | "CON" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(Not a, Implies(a, b))
-      | _ -> rule_error())
-  | "IFI" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(Implies(a, b), Implies(Implies(b, a), Iff(a, b)))
-      | _ -> rule_error())
-  | "IFO" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b], [] -> Implies(Iff(a, b), And(Implies(a, b), Implies(b, a)))
-      | _ -> rule_error())
-  | "ALL" -> (fun _ params premises -> match params, premises with
-      | [Term (Var v); Term t; Formula a], [] -> Implies(Forall(v, a), substitute_in_formula v t a)
-      | _ -> rule_error())
-  | "EXT" -> (fun _ params premises -> match params, premises with
-      | [Term (Var v); Term t; Formula a], [] -> Implies(substitute_in_formula v t a, Exists(v, a))
-      | _ -> rule_error())
-  | "ALH" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b; Term (Var v)], [] when not (var_occurs_free_in_formula v a) ->
-          Implies(Forall(v, Implies(a, b)), Implies(a, Forall(v, b)))
-      | _ -> rule_error())
-  | "EXH" -> (fun _ params premises -> match params, premises with
-      | [Formula a; Formula b; Term (Var v)], [] when not (var_occurs_free_in_formula v a) ->
-          Implies(Forall(v, Implies(b, a)), Implies(Exists(v, b), a))
-      | _ -> rule_error())
-
-  (* Inference rules *)
-  | "ASM" -> (fun assumptions params premises -> match params, premises with
-      | [], [Implies(a, _)] when List.mem a assumptions -> a
-      | _ -> rule_error())
-  | "IDN" -> (fun _ params premises -> match params, premises with
-      | [], [a] -> a
-      | _ -> rule_error())
-  | "MOD" -> (fun _ params premises -> match params, premises with
-      | [], [Implies(a, b); c] when c = a -> b
-      | _ -> rule_error())
-  | "GEN" -> (fun assumptions params premises -> match params, premises with
-      | [Term (Var v)], [a] when not (List.exists (var_occurs_free_in_formula v) assumptions) -> Forall(v, a)
-      | _ -> rule_error())
-  | _ -> raise (KernelError (UnknownRule, None))
-
 let resolve_param cache proof = function
   | Formula f -> Formula f
   | Term t -> Term t
@@ -258,7 +141,7 @@ let rec prove_thesis_cached cache proof ref_ =
                     raise (KernelError (RuleViolation, None))
                   else if name <> "ASM" && not (List.for_all (prove_thesis_cached cache proof) refs) then
                     raise (KernelError (RuleViolation, None))
-                  else if rule name assumptions resolved_params premises <> formula then
+                  else if Rules.rule name assumptions resolved_params premises <> formula then
                     raise (KernelError (RuleViolation, None))
                   else true
 

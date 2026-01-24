@@ -4,6 +4,6 @@
  (modules parser)
  (flags --exn-carries-state))
 (library
- (modules foundation types kernel lexer parser errors parser_utils fof_utils)
+ (modules foundation types kernel rules lexer parser errors parser_utils fof_utils)
  (name foundation)
  (public_name foundation))
