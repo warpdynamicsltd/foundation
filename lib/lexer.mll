@@ -34,10 +34,11 @@ rule token = parse
   | "}"                  { RCURL }
   | "$false"             { FALSE }
   | "$true"              { TRUE }
-  | "term:"              { TERM_PREFIX }
-  | "form:"              { FORMULA_PREFIX }
+  | "t:"              { TERM_PREFIX }
+  | "f:"              { FORMULA_PREFIX }
   | ['a'-'z']['a'-'z''A'-'Z''0'-'9''_']* as cname { LWORD(cname) }
   | ['A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as vname { UWORD(vname) }
+  | "%"['a'-'z''A'-'Z''0'-'9''_']* as pname { PWORD(pname) }
   | ['0'-'9']+ as lxm    { INT(int_of_string lxm) }
   | eof                  { EOF }
   | _ as c               { raise (Error ("Illegal character: " ^ String.make 1 c)) }

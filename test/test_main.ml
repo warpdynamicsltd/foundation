@@ -22,41 +22,44 @@ let run_wff_tests name tests =
 let atomic_tests = [
   ("parse_true", "$true", True);
   ("parse_false", "$false", False);
-  ("simple_predicate", "p", Pred ("p", []));
-  ("predicate_with_args", "p(a, b)", Pred ("p", [Const "a"; Const "b"]));
-  ("predicate_with_vars", "p(X, Y)", Pred ("p", [Var "X"; Var "Y"]));
-  ("equality", "X = a", Pred ("=", [Var "X"; Const "a"]));
+  ("simple_predicate", "p", Pred (Std "p", []));
+  ("predicate_with_args", "p(a, b)", Pred (Std "p", [Const (Std "a"); Const (Std "b")]));
+  ("gen_predicate_with_args", "%p(a, b)", Pred (Gen "%p", [Const (Std "a"); Const (Std "b")]));
+  ("predicate_with_vars", "p(X, Y)", Pred (Std "p", [Var "X"; Var "Y"]));
+  ("equality", "X = a", Pred (Std "=", [Var "X"; Const (Std "a")]));
+  ("equality with gen", "X = %a", Pred (Std "=", [Var "X"; Const (Gen "%a")]));
+  "equality with gen", "X = %f(X, Y)", Pred (Std "=", [Var "X"; Func (Gen "%f", [Var "X"; Var "Y"])]);
 ]
 
 (* Logical connective tests *)
 let connective_tests = [
-  ("negation", "~p", Not (Pred ("p", [])));
-  ("conjunction", "p & q", And (Pred ("p", []), Pred ("q", [])));
-  ("disjunction", "p | q", Or (Pred ("p", []), Pred ("q", [])));
-  ("implication", "p => q", Implies (Pred ("p", []), Pred ("q", [])));
-  ("biconditional", "p <=> q", Iff (Pred ("p", []), Pred ("q", [])));
+  ("negation", "~p", Not (Pred (Std "p", [])));
+  ("conjunction", "p & q", And (Pred (Std "p", []), Pred (Std "q", [])));
+  ("disjunction", "p | q", Or (Pred (Std "p", []), Pred (Std "q", [])));
+  ("implication", "p => q", Implies (Pred (Std "p", []), Pred (Std "q", [])));
+  ("biconditional", "p <=> q", Iff (Pred (Std "p", []), Pred (Std "q", [])));
 ]
 
 (* Complex formula tests *)
 let complex_tests = [
-  ("nested_negation", "~~p", Not (Not (Pred ("p", []))));
-  ("conjunction_with_negation", "~p & q", And (Not (Pred ("p", [])), Pred ("q", [])));
-  ("parenthesized", "(p & q) => r", Implies (And (Pred ("p", []), Pred ("q", [])), Pred ("r", [])));
+  ("nested_negation", "~~p", Not (Not (Pred (Std "p", []))));
+  ("conjunction_with_negation", "~p & q", And (Not (Pred (Std "p", [])), Pred (Std "q", [])));
+  ("parenthesized", "(p & q) => r", Implies (And (Pred (Std "p", []), Pred (Std "q", [])), Pred (Std "r", [])));
 ]
 
 (* Quantifier tests *)
 let quantifier_tests = [
-  ("forall_single_var", "![X]: p(X)", Forall ("X", Pred ("p", [Var "X"])));
-  ("exists_single_var", "?[X]: p(X)", Exists ("X", Pred ("p", [Var "X"])));
-  ("forall_multiple_vars", "![X, Y]: p(X, Y)", Forall ("X", Forall ("Y", Pred ("p", [Var "X"; Var "Y"]))));
-  ("nested_quantifiers", "![X]: ?[Y]: p(X, Y)", Forall ("X", Exists ("Y", Pred ("p", [Var "X"; Var "Y"]))));
-  ("quantifier_with_implication", "![X]: (p(X) => q(X))", Forall ("X", Implies (Pred ("p", [Var "X"]), Pred ("q", [Var "X"]))));
+  ("forall_single_var", "![X]: p(X)", Forall ("X", Pred (Std "p", [Var "X"])));
+  ("exists_single_var", "?[X]: p(X)", Exists ("X", Pred (Std "p", [Var "X"])));
+  ("forall_multiple_vars", "![X, Y]: p(X, Y)", Forall ("X", Forall ("Y", Pred (Std "p", [Var "X"; Var "Y"]))));
+  ("nested_quantifiers", "![X]: ?[Y]: p(X, Y)", Forall ("X", Exists ("Y", Pred (Std "p", [Var "X"; Var "Y"]))));
+  ("quantifier_with_implication", "![X]: (p(X) => q(X))", Forall ("X", Implies (Pred (Std "p", [Var "X"]), Pred (Std "q", [Var "X"]))));
 ]
 
 (* Term tests *)
 let term_tests = [
-  ("function_term", "p(f(a, b))", Pred ("p", [Func ("f", [Const "a"; Const "b"])]));
-  ("nested_functions", "p(f(g(a)))", Pred ("p", [Func ("f", [Func ("g", [Const "a"])])]));
+  ("function_term", "p(f(a, b))", Pred (Std "p", [Func (Std "f", [Const (Std "a"); Const (Std "b")])]));
+  ("nested_functions", "p(f(g(a)))", Pred (Std "p", [Func (Std "f", [Func (Std "g", [Const (Std "a")])])]));
 ]
 
 (* Helper to read file contents *)
@@ -70,7 +73,7 @@ let read_file path =
 let test_parse_from_file () =
   let content = read_file "sample_wff" |> String.trim in
   let result = parse_wff content in
-  let expected = Forall ("X", Implies (Pred ("p", [Var "X"]), Pred ("q", [Var "X"]))) in
+  let expected = Forall ("X", Implies (Pred (Std "p", [Var "X"]), Pred (Std "q", [Var "X"]))) in
   assert (result = expected);
   print_endline "✓ parse_from_file passed"
 

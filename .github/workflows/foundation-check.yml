@@ -1,0 +1,23 @@
+name: Foundation check
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: sudo apt install -y libgmp-dev opam
+      - run: ./install.sh
+      - run: ./foundation < data/example1
+      - run: ./foundation < data/example2

@@ -1,4 +1,4 @@
-(** Statement parsing tests *)
+(** Proof verification tests *)
 
 (* Helper to read file contents *)
 let read_file path =
@@ -7,10 +7,10 @@ let read_file path =
     ~finally:(fun () -> close_in_noerr ic)
     (fun () -> really_input_string ic (in_channel_length ic))
 
-(* Generic test function: read from file and parse statement *)
-let test_parse_statement_file path =
+(* Generic test function: read from file and verify proof *)
+let test_prove_file path =
   let content = read_file path in
-  Foundation.parse_statement content
+  Foundation.prove content
 
 (* Test runner *)
 let run_test name f =
@@ -32,16 +32,16 @@ let run_test name f =
 
 (* Tests *)
 let test_example1 () =
-  test_parse_statement_file "example1"
+  test_prove_file "example1"
 
 let test_example2 () =
-  test_parse_statement_file "example2"
+  test_prove_file "example2"
 
 let () =
-  print_endline "Running Statement tests...";
+  print_endline "Running Proof tests...";
   print_endline "";
-  print_endline "=== Statement File Tests ===";
+  print_endline "=== Proof Verification Tests ===";
   run_test "example1" test_example1;
   run_test "example2" test_example2;
   print_endline "";
-  print_endline "All statement tests passed!"
+  print_endline "All proof tests passed!"

@@ -9,6 +9,7 @@
 
 %token <string> UWORD
 %token <string> LWORD
+%token <string> PWORD
 %token <int> INT
 %token COMMA DOT COLON LPAREN RPAREN SEMICOLON
 %token LCURL RCURL
@@ -51,10 +52,8 @@ statements:
 | statement statements { $1 :: $2 }
 
 statement:
-| ref=reference formula=fof_formula rule=rule_arg SEMICOLON
-        { Statement {ref; formula; statements=[||]; inference=Inference{ rule; refs=[]}; pos=($startpos) } }
-| ref=reference formula=fof_formula rule=rule_arg refs=refs_arg SEMICOLON
-        { Statement {ref; formula; statements=[||]; inference=Inference{ rule; refs}; pos=($startpos) } }
+| ref=reference formula=fof_formula inference=inference_arg SEMICOLON
+        { Statement {ref; formula; statements=[||]; inference; pos=($startpos) } }
 | ref=reference formula=fof_formula LCURL statements=statements RCURL
         { Statement {ref; formula; statements=Array.of_list statements; inference=Context; pos=($startpos) } }
 
@@ -68,16 +67,21 @@ integers:
 | INT { [$1] }
 | INT DOT integers { $1 :: $3 }
 
+inference:
+  | rule=rule {Inference{rule; refs=[]}}
+  | rule=rule refs=refs {Inference{rule; refs}}
+
 rule:
   | name=UWORD {Rule {name; params=[]}}
   | name=UWORD LPAREN params=params RPAREN {Rule {name; params}}
 
-rule_arg:
-  | LCURL rule RCURL { $2 }
+inference_arg:
+  | LCURL inference RCURL { $2 }
 
 param:
   | TERM_PREFIX term { Term $2 }
   | FORMULA_PREFIX fof_formula { Formula $2 }
+  | FORMULA_PREFIX reference {Reference $2}
 
 params:
   | param {[$1]}
@@ -86,10 +90,6 @@ params:
 refs:
   | reference {[$1]}
   | reference SEMICOLON refs {$1 :: $3}
-
-refs_arg:
-  LCURL RCURL { [] }
-| LCURL refs RCURL { $2 }
 
 fof_formula:
 | primary AND primary               { And($1, $3) }
@@ -109,7 +109,8 @@ primary:
     { List.fold_right (fun v acc -> Exists(v, acc)) $3 $6 }
 
 atomic_name:
-  LWORD                        { $1 }
+  | LWORD                        { Std $1 }
+  | PWORD                        { Gen $1 }
 
 predicate:
   atomic_name LPAREN terms RPAREN { Pred($1, $3) }
@@ -119,7 +120,7 @@ atom:
   TRUE                                     { True }
 | FALSE                                    { False }
 | predicate                                { $1 }
-| term EQUAL term                          { Pred("=", [$1; $3]) }
+| term EQUAL term                          { Pred(Std "=", [$1; $3]) }
 
 vars:
   var COMMA vars             { $1 :: $3 }

@@ -7,3 +7,7 @@
 (test
  (name test_statement)
  (libraries foundation))
+
+(test
+ (name test_proof)
+ (libraries foundation))

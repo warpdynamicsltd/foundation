@@ -5,7 +5,7 @@ type kernel_error_code =
   | ParserError
   | NotAdmissible
   | MalformedAxiom
-  | UnknownAxiom
+  | UnknownRule
   | MalformedRule
   | NotAllowedSkolemTerm
   | RefOutOfBound
@@ -21,12 +21,14 @@ type kernel_error_code =
   | VarExpectedInSubMap
   | DuplicateVarInSubMap
 
+exception KernelError of kernel_error_code * Lexing.position option
+
 let kernel_error_message = function
   | LexerError -> "illegal character"
   | ParserError -> "malformed expression"
   | NotAdmissible -> "not admissible"
   | MalformedAxiom -> "malformed axiom"
-  | UnknownAxiom -> "unknown axiom"
+  | UnknownRule -> "unknown rule"
   | MalformedRule -> "malformed rule"
   | NotAllowedSkolemTerm -> "not allowed skolem term"
   | RefOutOfBound -> "ref out of bound"

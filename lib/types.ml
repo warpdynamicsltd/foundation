@@ -1,19 +1,21 @@
 type reference =
   | Ref of int list
 
+type name = 
+  | Std of string
+  | Gen of string
+
 (* Type for terms (constants, variables, function applications) *)
 type term =
-  | Var of string                                          (* Variables *)
-  | Const of string                                        (* Constants *)
-  | SkolemConst of int list                                (* Skolem Const refered by int list with the same meaning as in Ref *)
-  | SkolemFunc of int list * term list                     (* Skolem Func refered by int list with the same meaning as in Ref *)
-  | Func of string * term list                             (* Function symbols with arguments *)
+  | Var of string                                           (* Variables *)
+  | Const of name                                           (* Constants *)
+  | Func of name * term list                                (* Function symbols with arguments *)
 
 (* Type for first-order logic formulas *)
 type first_order_formula =
   | True                                                   (* Logical constant True *)
   | False                                                  (* Logical constant False *)
-  | Pred of string * term list                             (* Predicate with terms as arguments *)
+  | Pred of name * term list                               (* Predicate with terms as arguments *)
   | Not of first_order_formula                             (* Negation *)
   | And of first_order_formula * first_order_formula       (* Conjunction *)
   | Or of first_order_formula * first_order_formula        (* Disjunction *)
@@ -25,6 +27,7 @@ type first_order_formula =
 type param = 
   | Term of term
   | Formula of first_order_formula
+  | Reference of reference 
 
 type rule = 
   | Rule of {name: string; params: param list}
