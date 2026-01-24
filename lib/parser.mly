@@ -1,22 +1,23 @@
 %{
   open Types
-  open Errors
+  (*open Errors*)
 
-  let cx_error msg pos =
-    (CxError (msg ^ " " ^ Parser_utils.location_to_string pos))
+  (*let cx_error msg pos =
+    (CxError (msg ^ " " ^ Parser_utils.location_to_string pos))*)
 
 %}
 
 %token <string> UWORD
 %token <string> LWORD
 %token <int> INT
-%token COMMA DOT COLON LPAREN RPAREN SEMICOLON SK
+%token COMMA DOT COLON LPAREN RPAREN SEMICOLON
 %token LCURL RCURL
 %token AND OR NOT IMPLIES IFF
 %token FORALL EXISTS
 %token TRUE FALSE
 %token EQUAL
 %token LBRACK RBRACK
+%token TERM_PREFIX FORMULA_PREFIX
 %token EOF
 
 %start input
@@ -30,7 +31,6 @@
 %type <Types.term>                wft
 %type <Types.reference>           ref
 %type <Types.statement>           statement
-%type <Types.generalized_formula> generalized_formula
 %type <Types.statement list>      statements
 %%
 
@@ -51,12 +51,12 @@ statements:
 | statement statements { $1 :: $2 }
 
 statement:
-| ref=reference formula=fof_formula mode=mode_arg gformulas=formulas_arg terms=terms_arg SEMICOLON
-        { Statement {ref; formula; statements=[||]; inference=Inference{ mode; gformulas; terms}; pos=($startpos) } }
-| ref=reference formula=fof_formula mode=mode_arg gformulas=formulas_arg SEMICOLON
-        { Statement {ref; formula; statements=[||]; inference=Inference{ mode; gformulas; terms=[]}; pos=($startpos) } }
+| ref=reference formula=fof_formula rule=rule_arg SEMICOLON
+        { Statement {ref; formula; statements=[||]; inference=Inference{ rule; refs=[]}; pos=($startpos) } }
+| ref=reference formula=fof_formula rule=rule_arg refs=refs_arg SEMICOLON
+        { Statement {ref; formula; statements=[||]; inference=Inference{ rule; refs}; pos=($startpos) } }
 | ref=reference formula=fof_formula LCURL statements=statements RCURL
-        { Statement {ref; formula; statements=Array.of_list statements; inference=Inference{ mode=Context; gformulas=[]; terms=[]}; pos=($startpos) } }
+        { Statement {ref; formula; statements=Array.of_list statements; inference=Context; pos=($startpos) } }
 
 (*| error { raise (cx_error "expected statement" $startpos) }*)
 
@@ -68,52 +68,34 @@ integers:
 | INT { [$1] }
 | INT DOT integers { $1 :: $3 }
 
-mode_arg:
-| LCURL mode_type=UWORD COLON mode_value=UWORD RCURL 
- 
-  { 
-    match  mode_type with
-      | "A" -> Axiom(mode_value)
-      | "R" -> Rule(mode_value)
-      | _ -> raise (cx_error "expected mode type A or R" $startpos)
+rule:
+  | name=UWORD {Rule {name; params=[]}}
+  | name=UWORD LPAREN params=params RPAREN {Rule {name; params}}
 
-  }
-| LCURL mode_type=UWORD RCURL
-  { 
-    match  mode_type with
-      | "ASM" -> Assumption
-      | _ -> raise (cx_error "expected assumption" $startpos)
+rule_arg:
+  | LCURL rule RCURL { $2 }
 
-  }
+param:
+  | TERM_PREFIX term { Term $2 }
+  | FORMULA_PREFIX fof_formula { Formula $2 }
 
+params:
+  | param {[$1]}
+  | param SEMICOLON params {$1 :: $3}
 
+refs:
+  | reference {[$1]}
+  | reference SEMICOLON refs {$1 :: $3}
 
-terms_arg:
+refs_arg:
   LCURL RCURL { [] }
-| LCURL terms RCURL { $2 }
-(*| error { raise (cx_error "expected terms arg" $startpos) }*)
-
-formulas_arg:
-  LCURL RCURL { [] }
-| LCURL formulas RCURL { $2 }
-
-formulas:
-  generalized_formula { [$1] }
-| generalized_formula SEMICOLON formulas { $1 :: $3 }
-
-generalized_formula:
-  reference { Reference $1 }
-| fof_formula { Formula $1 }
+| LCURL refs RCURL { $2 }
 
 fof_formula:
 | primary AND primary               { And($1, $3) }
 | primary OR primary                { Or($1, $3) }
 | primary IMPLIES primary           { Implies($1, $3) }
 | primary IFF primary               { Iff($1, $3) }
-| FORALL LBRACK vars RBRACK COLON primary
-    { List.fold_right (fun v acc -> Forall(v, acc)) $3 $6 }
-| EXISTS LBRACK vars RBRACK COLON primary
-    { List.fold_right (fun v acc -> Exists(v, acc)) $3 $6 }
 | primary                           { $1 }
 (*| error { raise (cx_error "expected formula" $startpos) }*)
 
@@ -121,6 +103,10 @@ primary:
 | atom { $1 }
 | NOT primary                       { Not $2 }
 | LPAREN fof_formula RPAREN { $2 }
+| FORALL LBRACK vars RBRACK COLON primary
+    { List.fold_right (fun v acc -> Forall(v, acc)) $3 $6 }
+| EXISTS LBRACK vars RBRACK COLON primary
+    { List.fold_right (fun v acc -> Exists(v, acc)) $3 $6 }
 
 atomic_name:
   LWORD                        { $1 }
@@ -152,8 +138,6 @@ terms:
 
 term:
   atomic_name LPAREN terms RPAREN     { Func($1, $3) }
-| SK integers LPAREN terms RPAREN     { SkolemFunc($2, $4) }
 | var                                 { Var $1 }
 | const                               { Const $1 }
-| SK integers                         { SkolemConst $2 }
 (*| error { raise (cx_error "expected term" $startpos) }*)

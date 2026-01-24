@@ -22,18 +22,16 @@ type first_order_formula =
   | Forall of string * first_order_formula                 (* Universal quantifier *)
   | Exists of string * first_order_formula                 (* Existential quantifier *)
 
-type generalized_formula =
-  | Reference of reference
+type param = 
+  | Term of term
   | Formula of first_order_formula
 
-type mode = 
-  | Axiom of string
-  | Rule of string
-  | Assumption
-  | Context
+type rule = 
+  | Rule of {name: string; params: param list}
 
 type inference = 
-  | Inference of {mode: mode; gformulas: generalized_formula list; terms: term list}
+  | Inference of {rule: rule; refs: reference list;}
+  | Context
 
 type statement =
   | Statement of

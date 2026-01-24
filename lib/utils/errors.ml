@@ -1,6 +1,8 @@
 exception CxError of string
 
 type kernel_error_code =
+  | LexerError
+  | ParserError
   | NotAdmissible
   | MalformedAxiom
   | UnknownAxiom
@@ -20,6 +22,8 @@ type kernel_error_code =
   | DuplicateVarInSubMap
 
 let kernel_error_message = function
+  | LexerError -> "illegal character"
+  | ParserError -> "malformed expression"
   | NotAdmissible -> "not admissible"
   | MalformedAxiom -> "malformed axiom"
   | UnknownAxiom -> "unknown axiom"
